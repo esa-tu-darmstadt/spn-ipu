@@ -50,3 +50,21 @@ WORKDIR /tmp
 RUN wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1w-0+deb11u2_amd64.deb \
     && dpkg -i libssl1.1_1.1.1w-0+deb11u2_amd64.deb \
     && rm libssl1.1_1.1.1w-0+deb11u2_amd64.deb
+
+# Build and install or-tools required for scheduling SPNs
+COPY ./build-ortools.sh /tmp/
+RUN chmod +x /tmp/build-ortools.sh && sudo /tmp/build-ortools.sh \
+    && rm -f /tmp/build-ortools.sh
+
+# Install Gurobi
+WORKDIR /opt
+RUN wget https://packages.gurobi.com/12.0/gurobi12.0.1_linux64.tar.gz && \
+    tar -xf gurobi12.0.1_linux64.tar.gz && \
+    rm gurobi12.0.1_linux64.tar.gz
+ENV LD_LIBRARY_PATH="/opt/gurobi1201/linux64/lib:$LD_LIBRARY_PATH"
+ENV PATH="/opt/gurobi1201/linux64/bin:$PATH"
+ENV GUROBI_HOME="/opt/gurobi1201/linux64"
+RUN echo "TOKENSERVER=lic1.hrz.tu-darmstadt.de" > /opt/gurobi1201/gurobi.lic
+ENV GRB_LICENSE_FILE="/opt/gurobi1201/gurobi.lic"
+
+RUN apt-get update && apt-get -y install graphviz
