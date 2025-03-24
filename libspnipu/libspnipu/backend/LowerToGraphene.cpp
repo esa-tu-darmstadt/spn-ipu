@@ -237,10 +237,12 @@ class TensorMapping {
 
 struct LowerNodeVisitor : NodeVisitor {
   LowerNodeVisitor(std::unordered_map<Node *, codedsl::Value> &nodeToValue,
-                   codedsl::Value &inputTensor, TensorMapping &tensorMapping)
+                   codedsl::Value &inputTensor, TensorMapping &tensorMapping,
+                   unsigned proc)
       : nodeToValue(nodeToValue),
         inputTensor(inputTensor),
-        tensorMapping(tensorMapping) {}
+        tensorMapping(tensorMapping),
+        proc(proc) {}
 
   void visit(ProductNode *node) final {
     if (nodeToValue.contains(node)) {
@@ -280,8 +282,8 @@ struct LowerNodeVisitor : NodeVisitor {
       return;
     }
 
-    // FIXME: Get the index of the feature in the input tensor
-    uint32_t index = 0;
+    uint32_t index =
+        tensorMapping.getLocalIndexOfFeature(proc, node->getScope());
     codedsl::Value x = inputTensor[index];
     // Calculate Gaussian distribution using:
     // e^(-(x - mean)^2/2*variance))/sqrt(2*PI*variance)
@@ -299,6 +301,7 @@ struct LowerNodeVisitor : NodeVisitor {
   std::unordered_map<Node *, codedsl::Value> &nodeToValue;
   codedsl::Value &inputTensor;
   TensorMapping &tensorMapping;
+  unsigned proc;
 };
 
 }  // namespace
@@ -412,7 +415,7 @@ void spnipu::lowerToGraphene(BSPSchedule &schedule) {
                   edge.getSource(), input[index]));
             }
 
-            LowerNodeVisitor visitor(nodeToValue, input, mapping);
+            LowerNodeVisitor visitor(nodeToValue, input, mapping, proc);
 
             for (NodeRef node : nodes) {
               node->accept(&visitor);
