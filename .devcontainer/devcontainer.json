@@ -1,0 +1,36 @@
+{
+	"name": "C++ with IPU",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"vadimcn.vscode-lldb",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"tintinweb.graphviz-interactive-preview"
+			],
+			"settings": {
+				"clangd.path": "clangd-19",
+				"C_Cpp.intelliSenseEngine": "disabled"
+			}
+		}
+	},
+	"runArgs": [
+		// Required to access the IPUs. Can be printed with gc-docker -e
+		"--ulimit",
+		"memlock=-1:-1",
+		"--net=host",
+		"--cap-add=IPC_LOCK",
+		"--device=/dev/infiniband/",
+		"--ipc=host"
+	],
+	"remoteEnv": {
+		"IPUOF_CONFIG_PATH": "/etc/ipuof.conf"
+	},
+	"mounts": [
+		"type=bind,source=/etc/ipuof.conf.d/p.conf,target=/etc/ipuof.conf"
+		// "source=${localEnv:HOME}/.Xauthority,target=/home/vscode/.Xauthority,type=bind,consistency=cached"
+	]
+}

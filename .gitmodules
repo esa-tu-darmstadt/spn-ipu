@@ -1,0 +1,3 @@
+[submodule "libspnipu/libs/graphene"]
+	path = libspnipu/libs/graphene
+	url = git@github.com:esa-tu-darmstadt/graphene.git
