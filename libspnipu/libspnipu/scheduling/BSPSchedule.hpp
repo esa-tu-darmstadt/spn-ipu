@@ -44,6 +44,8 @@ class BSPSchedule {
   /// the given superstep.
   const std::unordered_map<unsigned, std::unordered_set<NodeRef>>&
   getNodesOfSuperstep(unsigned superstep) const {
+    static std::unordered_map<unsigned, std::unordered_set<NodeRef>> empty;
+    if (superstep >= supersteps_.size()) return empty;
     return supersteps_.at(superstep).nodes;
   }
 
@@ -100,6 +102,9 @@ class BSPSchedule {
   // Returns the outgoing edges of a superstep. Only valid after the schedule is
   // locked.
   const std::unordered_set<EdgeRef>& getOutgoingEdges(unsigned superstep) const;
+
+  /// Returns a new schedule identical to this but without empty supersteps.
+  BSPSchedule withoutEmptySupersteps() const;
 
  private:
   // Maps each node to the superstep it is scheduled in

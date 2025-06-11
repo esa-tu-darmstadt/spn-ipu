@@ -103,3 +103,20 @@ const std::unordered_set<EdgeRef>& BSPSchedule::getOutgoingEdges(
   }
   return supersteps_.at(superstep).outgoingEdges;
 }
+
+BSPSchedule BSPSchedule::withoutEmptySupersteps() const {
+  BSPSchedule newSchedule(spn_);
+  unsigned shiftedSuperstep = 0;
+  for (unsigned s = 0; s < numSupersteps_; s++) {
+    if (getNodesOfSuperstep(s).size() > 0) {
+      for (auto& [proc, nodes] : getNodesOfSuperstep(s)) {
+        for (NodeRef node : nodes) {
+          newSchedule.scheduleNode(node, shiftedSuperstep, proc);
+        }
+      }
+      shiftedSuperstep++;
+    }
+  }
+  newSchedule.lock();
+  return newSchedule;
+}
