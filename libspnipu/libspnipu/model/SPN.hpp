@@ -15,7 +15,7 @@ class SPN {
   const NodeRef getRoot() const { return root_; }
 
   template <typename T, typename... Args>
-  NodeRef createNode(Args&&... args) {
+  NodeRef createNode(Args &&...args) {
     nodes_.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
     return nodes_.back().get();
   }
@@ -25,6 +25,8 @@ class SPN {
 
   void dump() const { root_->dump(); }
 
+  const auto &getNodes() const { return nodes_; }
+
   template <NodeTraversalOrder Order = NodeTraversalOrder::PreOrder>
   void walk(std::function<void(NodeRef)> visitor) const {
     root_->walk<Order>(visitor);
@@ -33,7 +35,7 @@ class SPN {
   unsigned getNumFeatures() const {
     unsigned numFeatures = 0;
     walk([&numFeatures](NodeRef node) {
-      if (auto leaf = dynamic_cast<LeafNode*>(node)) {
+      if (auto leaf = dynamic_cast<LeafNode *>(node)) {
         numFeatures = std::max(numFeatures, leaf->getScope());
       }
     });
