@@ -1,23 +1,37 @@
 #include "libspnipu/model/Nodes.hpp"
 
 #include <iostream>
+#include <unordered_set>
 
 #include "libspnipu/model/Visitor.hpp"
 
 using namespace spnipu;
 
+namespace {
+template <NodeTraversalOrder Order>
+void walkNode(NodeRef node, std::function<void(NodeRef)> visitor,
+              std::unordered_set<NodeRef>& visited) {
+  if (visited.find(node) != visited.end()) {
+    return;
+  }
+  visited.insert(node);
+  if constexpr (Order == NodeTraversalOrder::PreOrder) {
+    visitor(node);
+  }
+  for (const NodeRef child : node->getChildren()) {
+    walkNode<Order>(child, visitor, visited);
+  }
+  if constexpr (Order == NodeTraversalOrder::PostOrder) {
+    visitor(node);
+  }
+}
+}  // namespace
+
 // ----------------- Node -----------------
 template <NodeTraversalOrder Order>
 void Node::walk(std::function<void(NodeRef)> visitor) {
-  if constexpr (Order == NodeTraversalOrder::PreOrder) {
-    visitor(this);
-  }
-  for (const NodeRef child : getChildren()) {
-    child->walk<Order>(visitor);
-  }
-  if constexpr (Order == NodeTraversalOrder::PostOrder) {
-    visitor(this);
-  }
+  std::unordered_set<NodeRef> visited;
+  walkNode<Order>(this, visitor, visited);
 }
 
 template void Node::walk<NodeTraversalOrder::PreOrder>(
