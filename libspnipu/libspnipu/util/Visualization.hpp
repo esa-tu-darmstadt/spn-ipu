@@ -7,6 +7,7 @@
 #include "libspnipu/model/Nodes.hpp"
 #include "libspnipu/model/SPN.hpp"
 #include "libspnipu/scheduling/BSPSchedule.hpp"
+#include "libspnipu/scheduling/PerformanceModel.hpp"
 
 namespace spnipu {
 
@@ -21,7 +22,8 @@ class DotVisualizer {
 
  private:
   // Helper for node attributes
-  static std::string getNodeAttributes(NodeRef node);
+  static std::string getNodeAttributes(NodeRef node, unsigned proc,
+                                       PerformanceModel& model);
 
   // Helper to generate node IDs
   static std::string getNodeId(NodeRef node);
