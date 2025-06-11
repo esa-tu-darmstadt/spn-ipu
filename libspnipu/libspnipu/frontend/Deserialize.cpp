@@ -65,8 +65,8 @@ struct ::fmt::formatter<::capnp::Text::Reader> {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(const ::capnp::Text::Reader& input,
-              FormatContext& ctx) -> decltype(ctx.out()) {
+  auto format(const ::capnp::Text::Reader& input, FormatContext& ctx)
+      -> decltype(ctx.out()) {
     // Cant we write the string directly, without copying?
     return format_to(ctx.out(), "{}", std::string(input.begin(), input.end()));
   }
@@ -77,8 +77,8 @@ struct ::fmt::formatter<::kj::String> {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(const ::kj::String& input,
-              FormatContext& ctx) -> decltype(ctx.out()) {
+  auto format(const ::kj::String& input, FormatContext& ctx)
+      -> decltype(ctx.out()) {
     // Cant we write the string directly, without copying?
     return format_to(ctx.out(), "{}", std::string(input.begin(), input.end()));
   }
@@ -89,8 +89,8 @@ struct ::fmt::formatter<::kj::StringTree> {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(const ::kj::StringTree& input,
-              FormatContext& ctx) -> decltype(ctx.out()) {
+  auto format(const ::kj::StringTree& input, FormatContext& ctx)
+      -> decltype(ctx.out()) {
     // This one hurts. No really, it does.
     std::string result;
     input.visit([&result](::kj::ArrayPtr<const char> array) {
@@ -109,19 +109,22 @@ SPN spnipu::deserializeSPN(std::filesystem::path filename) {
   SPN spn;
 
   auto header = message.getRoot<input::Header>();
+  spdlog::debug("SPN file as string: {}", header.toString());
 
+  input::Model::Reader model;
   if (header.isModel())
-    throw std::runtime_error("Should not deserialize a model, only a query");
+    model = header.getModel();
+  else {
+    auto query = header.getQuery();
+    if (!query.hasJoint())
+      throw std::runtime_error("Can only deserialize joint queries");
 
-  auto query = header.getQuery();
-  if (!query.hasJoint())
-    throw std::runtime_error("Can only deserialize joint queries");
+    auto joint = query.getJoint();
 
-  auto joint = query.getJoint();
-
-  auto model = joint.getModel();
+    model = joint.getModel();
+  }
   if (model.hasName()) spdlog::debug("SPN Name: {}", model.getName());
-  spdlog::debug("SPN as string: {}", model.toString());
+
   spdlog::debug("Num features: {}", model.getNumFeatures());
   spdlog::debug("Num nodes: {}", model.getNodes().size());
 
