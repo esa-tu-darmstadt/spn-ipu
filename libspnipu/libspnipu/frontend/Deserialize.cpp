@@ -1,6 +1,8 @@
 #include "libspnipu/frontend/Deserialize.hpp"
 
 #include <capnp/serialize.h>
+#include <fcntl.h>
+#include <spdlog/spdlog.h>
 
 #include "libspnipu/model/Nodes.hpp"
 #include "spflow.capnp.h"
@@ -65,7 +67,7 @@ struct ::fmt::formatter<::capnp::Text::Reader> {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(const ::capnp::Text::Reader& input, FormatContext& ctx)
+  auto format(const ::capnp::Text::Reader& input, FormatContext& ctx) const
       -> decltype(ctx.out()) {
     // Cant we write the string directly, without copying?
     return format_to(ctx.out(), "{}", std::string(input.begin(), input.end()));
@@ -77,7 +79,7 @@ struct ::fmt::formatter<::kj::String> {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(const ::kj::String& input, FormatContext& ctx)
+  auto format(const ::kj::String& input, FormatContext& ctx) const
       -> decltype(ctx.out()) {
     // Cant we write the string directly, without copying?
     return format_to(ctx.out(), "{}", std::string(input.begin(), input.end()));
@@ -89,7 +91,7 @@ struct ::fmt::formatter<::kj::StringTree> {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(const ::kj::StringTree& input, FormatContext& ctx)
+  auto format(const ::kj::StringTree& input, FormatContext& ctx) const
       -> decltype(ctx.out()) {
     // This one hurts. No really, it does.
     std::string result;
