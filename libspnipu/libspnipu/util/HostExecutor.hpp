@@ -1,5 +1,7 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <cmath>
 #include <vector>
 
@@ -33,6 +35,8 @@ class HostExecutor : public NodeVisitor {
       product *= result_;
     }
     result_ = product;
+
+    spdlog::trace("Evaluating ProductNode: result={}", result_);
   }
 
   void visit(SumNode* node) override {
@@ -43,13 +47,15 @@ class HostExecutor : public NodeVisitor {
       sum += result_ * node->getWeight(i);
     }
     result_ = sum;
+
+    spdlog::trace("Evaluating SumNode: result={}", result_);
   }
 
   void visit(GaussianLeafNode* node) override {
     const unsigned scope = node->getScope();
     if (scope >= input_.size()) {
-      result_ = 0.0;
-      return;
+      throw std::out_of_range(fmt::format(
+          "Scope {} is out of range for input size {}", scope, input_.size()));
     }
 
     const double x = input_[scope];
@@ -62,6 +68,10 @@ class HostExecutor : public NodeVisitor {
     const double normalization = 1.0 / std::sqrt(2.0 * M_PI * variance);
 
     result_ = normalization * std::exp(exponent);
+
+    spdlog::trace(
+        "Evaluating GaussianLeafNode: x={}, mean={}, variance={}, result={}", x,
+        mean, variance, result_);
   }
 };
 
