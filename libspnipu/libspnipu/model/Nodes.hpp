@@ -1,7 +1,5 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
-
 #include <boost/container/small_vector.hpp>
 #include <functional>
 #include <vector>
