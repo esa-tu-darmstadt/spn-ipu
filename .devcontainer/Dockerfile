@@ -35,13 +35,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     libre2-dev \
     librdmacm-dev
 
-# Build spdlog 1.8.0 needed for poplar
-WORKDIR /tmp
-RUN git clone https://github.com/gabime/spdlog.git && cd spdlog && git checkout v1.8.0 && \
-  mkdir build && cd build && \
-  cmake .. && make -j install && \
-  rm -rf /tmp/spdlog
-
 WORKDIR /home/vscode
 RUN echo "source /poplar/poplar_sdk-ubuntu_20_04-3.4.0+1507-69d9d03fd8/enable" >> /home/vscode/.bashrc
 

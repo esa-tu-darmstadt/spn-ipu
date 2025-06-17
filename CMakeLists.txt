@@ -15,5 +15,8 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF) 
 find_package(Boost REQUIRED)
 
+find_package(spdlog REQUIRED)
+find_package(fmt REQUIRED)
+
 add_subdirectory(libspnipu)
 add_subdirectory(apps)
