@@ -4,6 +4,6 @@
 #include "poplar/Tensor.hpp"
 namespace spnipu {
 
-void lowerToGraphene(BSPSchedule &schedule);
+void lowerToGraphene(BSPSchedule &schedule, bool verbose = false);
 
 }

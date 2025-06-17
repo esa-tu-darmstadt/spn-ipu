@@ -306,7 +306,7 @@ struct LowerNodeVisitor : NodeVisitor {
 
 }  // namespace
 
-void spnipu::lowerToGraphene(BSPSchedule &schedule) {
+void spnipu::lowerToGraphene(BSPSchedule &schedule, bool verbose) {
   schedule.lock();
 
   poplar::Graph &graph = Context::graph();
@@ -397,12 +397,17 @@ void spnipu::lowerToGraphene(BSPSchedule &schedule) {
           {spn.getRoot(), nullptr});
     }
 
+    if (verbose)
+      inputTensors[i].print("Input tensor of superstep " + std::to_string(i) +
+                            " before its execution");
+
     for (auto &[proc, nodes] : nodesPerProcs) {
       using namespace codedsl;
 
       // Execute the nodes of the current superstep in parallel
       Context::ExecuteInParallel parallelContext;
-
+      spdlog::trace("Lowering superstep {} on processor {} with {} nodes", i,
+                    proc, nodes.size());
       ExecuteOnSingleTile(
           [&](Value input, Value output) {
             // Mapping from a node to the value of its result.
@@ -429,6 +434,10 @@ void spnipu::lowerToGraphene(BSPSchedule &schedule) {
           },
           proc, In(inputTensors[i]), Out(outputTensors[i]));
     }
+
+    if (verbose)
+      outputTensors[i].print("Output tensor of superstep " + std::to_string(i) +
+                             " after its execution");
 
     // Copy the output tensor of the current superstep to the input tensors of
     // the next supersteps.
