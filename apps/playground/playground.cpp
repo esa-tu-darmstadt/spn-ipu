@@ -14,10 +14,13 @@ using namespace spnipu;
 int main(int argc, char** argv) {
   spdlog::set_level(spdlog::level::trace);
 
-  SPN spn = deserializeSPN("/workspaces/spn-ipu/data/spns/NIPS5.bin");
+  // SPN spn = deserializeSPN("/workspaces/spn-ipu/data/spns/gaussian10.bin");
+  SPN spn = deserializeSPN("/workspaces/spn-ipu/data/spns/gaussian10.bin");
 
-  std::vector<double> hostInput(10, 0.5);
-  std::vector<float> deviceInput(hostInput.size());
+  DotVisualizer::plotSPN(spn, "spn.dot");
+
+  std::vector<double> hostInput(spn.getNumFeatures(), 0.5);
+  std::vector<float> deviceInput(spn.getNumFeatures());
   std::copy(hostInput.begin(), hostInput.end(), deviceInput.begin());
 
   HostExecutor hostExecutor(spn);
@@ -49,7 +52,7 @@ int main(int argc, char** argv) {
   schedule.validate();
 
   ExecutionEngine engine(schedule);
-  engine.compile();
+  engine.compile(true);
   float deviceResult = engine.run(deviceInput);
 
   spdlog::info("Host result: {}", hostResult);
