@@ -1,13 +1,7 @@
 add_library(SPNIPUFrontend Deserialize.cpp)
 target_link_libraries(SPNIPUFrontend PUBLIC SPNIPUModel)
 
-# Fetch capnproto and generate files
-FetchContent_Declare(
-  capnproto
-  GIT_REPOSITORY    git@github.com:capnproto/capnproto.git
-  GIT_TAG           v1.1.0
-)
-FetchContent_MakeAvailable(capnproto)
+find_package(CapnProto REQUIRED)
 
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS spflow.capnp)
 message(STATUS "Capnproto headers: ${CAPNP_HDRS}")

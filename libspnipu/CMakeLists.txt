@@ -1,4 +1,12 @@
-add_subdirectory(libs/graphene EXCLUDE_FROM_ALL)
+## -------- Graphene --------
+option(USE_GRAPHENE_SUBMODULE "Use graphene as a submodule" ON)
+if (USE_GRAPHENE_SUBMODULE)
+  message(STATUS "Using graphene as a submodule")
+  add_subdirectory(libs/graphene EXCLUDE_FROM_ALL)
+else()
+  message(STATUS "Using graphene as a package")
+  find_package(graphene REQUIRED)
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

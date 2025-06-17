@@ -47,9 +47,9 @@ RUN echo "source /poplar/poplar_sdk-ubuntu_20_04-3.4.0+1507-69d9d03fd8/enable" >
 
 # Required by poplar, but not provided by Debian 12 anymore: libssl1.1
 WORKDIR /tmp
-RUN wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1w-0+deb11u2_amd64.deb \
-    && dpkg -i libssl1.1_1.1.1w-0+deb11u2_amd64.deb \
-    && rm libssl1.1_1.1.1w-0+deb11u2_amd64.deb
+RUN wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1w-0+deb11u3_amd64.deb \
+    && dpkg -i libssl1.1_1.1.1w-0+deb11u3_amd64.deb \
+    && rm libssl1.1_1.1.1w-0+deb11u3_amd64.deb
 
 # Build and install or-tools required for scheduling SPNs
 COPY ./build-ortools.sh /tmp/
@@ -68,3 +68,12 @@ RUN echo "TOKENSERVER=lic1.hrz.tu-darmstadt.de" > /opt/gurobi1201/gurobi.lic
 ENV GRB_LICENSE_FILE="/opt/gurobi1201/gurobi.lic"
 
 RUN apt-get update && apt-get -y install graphviz
+
+# Install conan
+RUN apt-get update && apt-get install -y pipx
+USER vscode
+RUN pipx install conan
+RUN mkdir -p /home/vscode/.conan2/profiles
+COPY --chown=vscode:vscode ./conan-profiles/clang-debug /home/vscode/.conan2/profiles/clang-debug
+COPY --chown=vscode:vscode ./conan-profiles/clang-release /home/vscode/.conan2/profiles/clang-release
+RUN ln -sf /home/vscode/.conan2/profiles/clang-release /home/vscode/.conan2/profiles/default

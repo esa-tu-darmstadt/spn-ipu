@@ -10,8 +10,13 @@
         "editor.detectIndentation": true,
         "editor.tabSize": 2,
         "editor.insertSpaces": true,
+        "cmake.useCMakePresets": "always",
         "cmake.configureArgs": [
-            "-DPOPLIBS_ENABLED_IPU_ARCH_NAMES=ipu2"
+            "-DPOPLIBS_ENABLED_IPU_ARCH_NAMES=ipu2",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=YES",
         ],
+        "clangd.arguments": [
+            "-compile-commands-dir=build/RelWithDebInfo"
+        ]
     }
 }
