@@ -1,5 +1,7 @@
 #include "libspnipu/backend/ExecutionEngine.hpp"
 
+#include <spdlog/spdlog.h>
+
 #include <poplar/StreamCallback.hpp>
 
 #include "libgraphene/util/Runtime.hpp"
@@ -13,12 +15,12 @@ ExecutionEngine::ExecutionEngine(BSPSchedule &schedule)
 
 ExecutionEngine::~ExecutionEngine() {}
 
-void ExecutionEngine::compile() {
+void ExecutionEngine::compile(bool verbose) {
   // initialize the runtime
   size_t numIPUs = 1;
   runtime_ = std::make_unique<Runtime>(numIPUs);
 
-  lowerToGraphene(schedule_);
+  lowerToGraphene(schedule_, verbose);
 
   // compile the graph
   engine_ = std::make_unique<poplar::Engine>(runtime_->compileGraph());

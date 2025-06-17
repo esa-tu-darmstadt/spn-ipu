@@ -25,7 +25,7 @@ class ExecutionEngine {
   ExecutionEngine(BSPSchedule &schedule);
   ~ExecutionEngine();
 
-  void compile();
+  void compile(bool verbose = false);
 
   /// Run the SPN on the input data, i.e., calculates the joint probability of
   /// the SPN with the given features. Does not yet support batching.
