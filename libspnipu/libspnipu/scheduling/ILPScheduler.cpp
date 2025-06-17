@@ -263,9 +263,6 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
     spdlog::info("Solver was interrupted by the user.");
   }
 
-  // Create a BSP schedule based on the solution
-  BSPSchedule schedule(spn);
-
   if (result_status == MPSolver::OPTIMAL ||
       result_status == MPSolver::FEASIBLE) {
     spdlog::info("Solution ({}) found after {} s with objective value: {}",
@@ -275,6 +272,7 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
                  objective->Value());
 
     // Extract the solution and create a BSP schedule
+    BSPSchedule schedule(spn);
     for (NodeRef node : nodes) {
       int v = nodeToIndex[node];
       for (unsigned p = 0; p < P; p++) {
