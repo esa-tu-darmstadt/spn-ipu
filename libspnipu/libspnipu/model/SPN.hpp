@@ -2,6 +2,8 @@
 
 #include <list>
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 #include "libspnipu/model/Nodes.hpp"
 
@@ -9,8 +11,8 @@ namespace spnipu {
 
 class SPN {
   NodeRef root_;
-
   std::list<std::unique_ptr<Node>> nodes_;
+  std::string name_ = "Unknown SPN";
 
  public:
   const NodeRef getRoot() const { return root_; }
@@ -41,6 +43,33 @@ class SPN {
       }
     });
     return numFeatures + 1;
+  }
+
+  // SPN metadata
+  const std::string& getName() const { return name_; }
+  void setName(const std::string& name) { name_ = name; }
+
+  // Node statistics
+  std::unordered_map<std::string, unsigned> getNodeTypeDistribution() const {
+    std::unordered_map<std::string, unsigned> distribution;
+    
+    walk([&distribution](NodeRef node) {
+      if (dynamic_cast<SumNode*>(node)) {
+        distribution["sum"]++;
+      } else if (dynamic_cast<ProductNode*>(node)) {
+        distribution["product"]++;
+      } else if (dynamic_cast<GaussianLeafNode*>(node)) {
+        distribution["gaussian"]++;
+      } else {
+        distribution["unknown"]++;
+      }
+    });
+    
+    return distribution;
+  }
+
+  unsigned getTotalNodeCount() const {
+    return nodes_.size();
   }
 };
 

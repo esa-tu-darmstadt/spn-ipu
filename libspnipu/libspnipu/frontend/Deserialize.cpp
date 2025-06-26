@@ -149,5 +149,10 @@ SPN spnipu::deserializeSPN(std::filesystem::path filename) {
   close(fd);
 
   spn.setRoot(idToNode[model.getRootNode()]);
+  
+  // Set SPN name based on filename (last part without extension)
+  std::string spnName = filename.stem().string();
+  spn.setName(spnName);
+  
   return spn;
 }
