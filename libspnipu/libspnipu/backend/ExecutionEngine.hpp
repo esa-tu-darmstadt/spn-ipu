@@ -15,14 +15,14 @@ class Engine;
 
 namespace spnipu {
 class ExecutionEngine {
-  BSPSchedule &schedule_;
-  SPN &spn_;
+  const BSPSchedule &schedule_;
+  const SPN &spn_;
 
   std::unique_ptr<graphene::Runtime> runtime_;
   std::unique_ptr<poplar::Engine> engine_;
 
  public:
-  ExecutionEngine(BSPSchedule &schedule);
+  ExecutionEngine(const BSPSchedule &schedule);
   ~ExecutionEngine();
 
   void compile(bool verbose = false);

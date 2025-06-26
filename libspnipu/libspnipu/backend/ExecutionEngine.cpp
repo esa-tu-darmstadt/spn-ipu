@@ -10,7 +10,7 @@
 using namespace spnipu;
 using namespace graphene;
 
-ExecutionEngine::ExecutionEngine(BSPSchedule &schedule)
+ExecutionEngine::ExecutionEngine(const BSPSchedule &schedule)
     : schedule_(schedule), spn_(schedule.getSPN()) {}
 
 ExecutionEngine::~ExecutionEngine() {}
