@@ -65,10 +65,12 @@ class GrapheneConan(ConanFile):
             self.requires("fmt/11.1.3")
             self.requires("cli11/2.3.2")
             self.requires("spdlog/1.15.1")
+            self.requires("nlohmann_json/3.9.1")
 
     
         # Our own dependencies:
         self.requires("capnproto/1.1.0")
+        self.requires("dagp/1.0")
 
     def build(self):
         cmake = CMake(self)
