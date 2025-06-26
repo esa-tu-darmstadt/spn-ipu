@@ -1,6 +1,8 @@
 /build
 .cache/
+.venv
 
 CMakeUserPresets.json
 
 *.dot
+*.html
