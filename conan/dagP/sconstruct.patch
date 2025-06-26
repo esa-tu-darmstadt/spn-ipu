@@ -1,0 +1,24 @@
+diff --git a/SConstruct b/SConstruct
+index deaf234..443e213 100644
+--- a/SConstruct
++++ b/SConstruct
+@@ -138,6 +138,10 @@ env = Environment(variables=vars, ENV = os.environ, TARFLAGS = '-c -z',
+   LIBPATH = [lib]
+ )
+ 
++info = SConscript('./conan/SConscript_conandeps')
++flags = info["conandeps"]
++env.MergeFlags(flags)
++
+ env.Help(vars.GenerateHelpText(env))
+ 
+ SetOption('num_jobs', env.get("build_threads"))
+@@ -260,7 +264,7 @@ l = env.StaticLibrary('lib/'+dgraphlibname, dgraphlibsrcs)
+ env.Alias('dagplib', l)
+ 
+ 
+-rmlgp = env.Program('exe/rMLGP', 'src/recBisection/rMLGP.c')
++rmlgp = env.Program('exe/rMLGP', 'src/recBisection/rMLGP.c', LIBS = [ 'dagp', 'metis', 'GKlib', 'm'])
+ 
+ 
+ env.Alias('rMLGP', rmlgp)
