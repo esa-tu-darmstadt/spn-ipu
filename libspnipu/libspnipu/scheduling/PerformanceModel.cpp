@@ -29,7 +29,7 @@ struct NonLogNodeCostVisitor : PerformanceModel::NodeCostVisitor {
 };
 }  // namespace
 
-PerformanceModel::PerformanceModel(SPN& spn) : spn_(spn) {
+PerformanceModel::PerformanceModel(const SPN& spn) : spn_(spn) {
   nodeVostVisitor = std::make_unique<NonLogNodeCostVisitor>();
 }
 
@@ -44,4 +44,36 @@ int PerformanceModel::getComputationCost(NodeRef node, unsigned proc) const {
 int PerformanceModel::getCommunicationCost() const {
   // The communication cost is the number of cycles
   return 1;
+}
+
+int PerformanceModel::getComputationCost(PartitionRef partition, unsigned proc) const {
+  if (!partition) {
+    return 0;
+  }
+  
+  int totalCost = 0;
+  for (NodeRef node : partition->getNodes()) {
+    totalCost += getComputationCost(node, proc);
+  }
+  return totalCost;
+}
+
+int PerformanceModel::getCommunicationCost(const PartitionEdge &edge) const {
+  // Communication cost is the single edge cost times the number of edges between the partitions
+  int edgeCount = 0;
+  
+  // Count edges from source partition nodes to target partition nodes
+  for (NodeRef sourceNode : edge.source->getNodes()) {
+    for (NodeRef child : sourceNode->getChildren()) {
+      // Check if this child is in the target partition
+      for (NodeRef targetNode : edge.target->getNodes()) {
+        if (child == targetNode) {
+          edgeCount++;
+          break;
+        }
+      }
+    }
+  }
+  
+  return getCommunicationCost() * edgeCount;
 }
