@@ -31,7 +31,7 @@ class BSPSchedule {
   };
 
  public:
-  BSPSchedule(SPN& spn);
+  BSPSchedule(const SPN& spn) : spn_(spn) {}
 
   /// Returns the superstep in which a node is scheduled.
   unsigned getSuperstep(NodeRef node) const {
@@ -85,7 +85,7 @@ class BSPSchedule {
   /// Returns true if the schedule is locked.
   bool isLocked() const { return locked_; }
 
-  SPN& getSPN() const { return spn_; }
+  const SPN& getSPN() const { return spn_; }
 
   // Creates a schedule that runs all nodes in a single superstep on a single
   // processor. Useful for debugging.
@@ -106,6 +106,32 @@ class BSPSchedule {
   /// Returns a new schedule identical to this but without empty supersteps.
   BSPSchedule withoutEmptySupersteps() const;
 
+  /// Returns a description of the scheduling algorithm used to generate this
+  /// schedule.
+  const std::string& getSchedulingAlgorithmDescription() const {
+    return schedulingAlgorithmDescr;
+  }
+
+  /// Sets the description of the scheduling algorithm used to generate this
+  /// schedule.
+  void setSchedulingAlgorithmDescription(const std::string& description) {
+    schedulingAlgorithmDescr = description;
+  }
+
+  /// Returns a description of the algorithm used to partition the SPN
+  /// before scheduling, if partitioning was used.
+  const std::optional<std::string>& getPartitioningAlgorithmDescription()
+      const {
+    return partitioningAlgorithmDescr;
+  }
+
+  /// Sets the description of the algorithm used to partition the SPN
+  /// before scheduling, if partitioning was used.
+  void setPartitioningAlgorithmDescription(
+      const std::optional<std::string>& description) {
+    partitioningAlgorithmDescr = description;
+  }
+
  private:
   // Maps each node to the superstep it is scheduled in
   NodeAttr<unsigned> nodeToSuperstep_;
@@ -119,7 +145,10 @@ class BSPSchedule {
 
   bool locked_ = false;
 
-  SPN& spn_;
+  const SPN& spn_;
+
+  std::string schedulingAlgorithmDescr = "Unknown";
+  std::optional<std::string> partitioningAlgorithmDescr = "Unknown";
 };
 
 }  // namespace spnipu

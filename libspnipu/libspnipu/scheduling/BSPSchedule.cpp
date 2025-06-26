@@ -5,8 +5,6 @@
 
 using namespace spnipu;
 
-BSPSchedule::BSPSchedule(SPN& spn) : spn_(spn) {}
-
 void BSPSchedule::dump() const {
   for (const auto& [node, superstep] : nodeToSuperstep_) {
     std::cout << "Node " << node << " is scheduled in superstep " << superstep
@@ -106,6 +104,9 @@ const std::unordered_set<EdgeRef>& BSPSchedule::getOutgoingEdges(
 
 BSPSchedule BSPSchedule::withoutEmptySupersteps() const {
   BSPSchedule newSchedule(spn_);
+  newSchedule.schedulingAlgorithmDescr = schedulingAlgorithmDescr;
+  newSchedule.partitioningAlgorithmDescr = partitioningAlgorithmDescr;
+
   unsigned shiftedSuperstep = 0;
   for (unsigned s = 0; s < numSupersteps_; s++) {
     if (getNodesOfSuperstep(s).size() > 0) {
