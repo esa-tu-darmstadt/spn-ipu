@@ -15,9 +15,11 @@ class HostExecutor : public NodeVisitor {
   const SPN& spn_;
   std::vector<double> input_;
   double result_;
+  bool verbose_;
 
  public:
-  explicit HostExecutor(const SPN& spn) : spn_(spn), result_(0.0) {}
+  explicit HostExecutor(const SPN& spn, bool verbose = false)
+      : spn_(spn), result_(0.0), verbose_(verbose) {}
 
   double evaluate(const std::vector<double>& input) {
     input_ = input;
@@ -36,7 +38,7 @@ class HostExecutor : public NodeVisitor {
     }
     result_ = product;
 
-    spdlog::trace("Evaluating ProductNode: result={}", result_);
+    if (verbose_) spdlog::info("Evaluating ProductNode: result={}", result_);
   }
 
   void visit(SumNode* node) override {
@@ -48,7 +50,7 @@ class HostExecutor : public NodeVisitor {
     }
     result_ = sum;
 
-    spdlog::trace("Evaluating SumNode: result={}", result_);
+    if (verbose_) spdlog::info("Evaluating SumNode: result={}", result_);
   }
 
   void visit(GaussianLeafNode* node) override {
@@ -69,9 +71,10 @@ class HostExecutor : public NodeVisitor {
 
     result_ = normalization * std::exp(exponent);
 
-    spdlog::trace(
-        "Evaluating GaussianLeafNode: x={}, mean={}, variance={}, result={}", x,
-        mean, variance, result_);
+    if (verbose_)
+      spdlog::info(
+          "Evaluating GaussianLeafNode: x={}, mean={}, variance={}, result={}",
+          x, mean, variance, result_);
   }
 };
 
