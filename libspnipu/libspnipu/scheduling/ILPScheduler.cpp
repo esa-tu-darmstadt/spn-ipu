@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <future>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -25,16 +26,19 @@ std::string VarName(const std::string& base, int v, int p, int s) {
   return oss.str();
 }
 
-std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
-                                           const PerformanceModel& model) {
-  // Extract all nodes from the SPN
-  std::vector<NodeRef> nodes;
-  for (const std::unique_ptr<Node>& node : spn.getNodes()) {
-    nodes.push_back(node.get());
+std::optional<BSPSchedule> scheduleWithILPPartitioning(
+    const Partitioning& partitioning, const ILPConfig& config,
+    const PerformanceModel& model) {
+  // Extract all partitions
+  const auto& partitions = partitioning.getPartitions();
+  std::vector<PartitionRef> partitionRefs;
+  for (const auto& partition : partitions) {
+    partitionRefs.push_back(partition.get());
   }
-  std::unordered_map<NodeRef, int> nodeToIndex;
-  for (int i = 0; i < nodes.size(); i++) {
-    nodeToIndex[nodes[i]] = i;
+
+  std::unordered_map<PartitionRef, int> partitionToIndex;
+  for (int i = 0; i < partitionRefs.size(); i++) {
+    partitionToIndex[partitionRefs[i]] = i;
   }
 
   // Create the MPSolver instance.
@@ -64,15 +68,15 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
     throw std::runtime_error("Failed to create MPSolver instance.");
   }
 
-  spdlog::debug("Scheduling SPN using {} solver",
+  spdlog::debug("Scheduling Partitioning using {} solver",
                 ToString(solver->ProblemType()));
 
-  const int n = nodes.size();
+  const int n = partitionRefs.size();
   const int P = config.maxProcessors;
   const int S = config.maxSupersteps;
 
-  // 3D arrays (node x processor x superstep) for computation, presence, sent,
-  // and recv.
+  // 3D arrays (partition x processor x superstep) for computation, presence,
+  // sent, and recv.
   std::vector<std::vector<std::vector<const MPVariable*>>> comp(
       n, std::vector<std::vector<const MPVariable*>>(
              P, std::vector<const MPVariable*>(S, nullptr)));
@@ -86,7 +90,7 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
       n, std::vector<std::vector<const MPVariable*>>(
              P, std::vector<const MPVariable*>(S, nullptr)));
 
-  // Create binary variables for each node, processor, and superstep.
+  // Create binary variables for each partition, processor, and superstep.
   for (int v = 0; v < n; v++) {
     for (int p = 0; p < P; p++) {
       for (int s = 0; s < S; s++) {
@@ -100,7 +104,7 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
 
   // *** Add Constraints ***
 
-  // (1) Each node is computed exactly once.
+  // (1) Each partition is computed exactly once.
   for (int v = 0; v < n; v++) {
     LinearExpr sumComp;
     for (int p = 0; p < P; p++) {
@@ -130,15 +134,14 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
 
   // (3) Precedence: for every edge (u,v) and for each p, s, require that if v
   // is computed on p in superstep s then u’s value is present on p.
-  for (NodeRef v : nodes) {
-    for (NodeRef u : v->getChildren()) {
-      // Find indices for u and v in nodeList. (Assume we have a mapping;
-      // omitted here for brevity.)
-      int uIndex = nodeToIndex[u];
-      int vIndex = nodeToIndex[v];
+  for (int v = 0; v < n; v++) {
+    PartitionRef targetPartition = partitionRefs[v];
+    const auto& incomingEdges = partitioning.getOutgoingEdges(targetPartition);
+    for (const auto& edge : incomingEdges) {
+      int uIndex = partitionToIndex[edge.target];
       for (int p = 0; p < P; p++) {
         for (int s = 0; s < S; s++) {
-          solver->MakeRowConstraint(LinearExpr(comp[vIndex][p][s]) <=
+          solver->MakeRowConstraint(LinearExpr(comp[v][p][s]) <=
                                     LinearExpr(pres[uIndex][p][s]));
         }
       }
@@ -177,8 +180,8 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
     for (int p = 0; p < P; p++) {
       LinearExpr work_p;
       for (int v = 0; v < n; v++) {
-        NodeRef node = nodes[v];
-        int w = model.getComputationCost(node, p);
+        PartitionRef partition = partitionRefs[v];
+        int w = model.getComputationCost(partition, p);
         work_p += LinearExpr(comp[v][p][s]) * w;
       }
       // Work[s] >= work_p for all processors.
@@ -272,17 +275,31 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
                  objective->Value());
 
     // Extract the solution and create a BSP schedule
-    BSPSchedule schedule(spn);
-    for (NodeRef node : nodes) {
-      int v = nodeToIndex[node];
+    BSPSchedule schedule(partitioning.getSPN());
+    for (int v = 0; v < n; v++) {
+      PartitionRef partition = partitionRefs[v];
       for (unsigned p = 0; p < P; p++) {
         for (unsigned s = 0; s < S; s++) {
           if (comp[v][p][s]->solution_value() > 0.5) {
-            schedule.scheduleNode(node, s, p);
+            // Schedule all nodes in this partition
+            for (NodeRef node : partition->getNodes()) {
+              schedule.scheduleNode(node, s, p);
+            }
           }
         }
       }
     }
+
+    // Set the scheduling and partitioning algorithm descriptions (for logging)
+    std::string algorithmDescription = fmt::format(
+        "ILP with {} solver, max {} processors, max {} supersteps, {} solution",
+        ToString(solver->ProblemType()), config.maxProcessors,
+        config.maxSupersteps,
+        ProtoEnumToString<MPSolverResponseStatus>(
+            static_cast<MPSolverResponseStatus>(result_status)));
+    schedule.setSchedulingAlgorithmDescription(algorithmDescription);
+    schedule.setPartitioningAlgorithmDescription(
+        partitioning.getPartitioningAlgorithmDescription());
 
     schedule.lock();
     schedule.validate();
@@ -299,8 +316,22 @@ std::optional<BSPSchedule> scheduleWithILP(SPN& spn, const ILPConfig& config,
 
 }  // namespace
 
+std::optional<BSPSchedule> spnipu::scheduleWithILP(
+    const Partitioning& partitioning, const ILPConfig& config) {
+  PerformanceModel model(partitioning.getSPN());
+  return ::scheduleWithILPPartitioning(partitioning, config, model);
+}
+
 std::optional<BSPSchedule> spnipu::scheduleWithILP(SPN& spn,
                                                    const ILPConfig& config) {
-  PerformanceModel model(spn);
-  return ::scheduleWithILP(spn, config, model);
+  // Create one-to-one partitioning and schedule that instead
+  Partitioning partitioning = Partitioning::createOneToOnePartitioning(spn);
+  partitioning.lock();
+  std::optional<BSPSchedule> schedule = scheduleWithILP(partitioning, config);
+
+  // Clear the partitioning algorithm description to indicate that the SPN was
+  // not partitioned before scheduling.
+  if (schedule) schedule->setPartitioningAlgorithmDescription(std::nullopt);
+
+  return schedule;
 }

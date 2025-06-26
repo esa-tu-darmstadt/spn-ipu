@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libspnipu/scheduling/BSPSchedule.hpp"
+#include "libspnipu/model/Partitioning.hpp"
 
 namespace spnipu {
 enum class ILPSolver { Gurobi, CBC, GLPK, HIGHS };
@@ -12,6 +13,9 @@ struct ILPConfig {
   int threads = 128;
   bool enableOutput = true;
 };
+
+std::optional<BSPSchedule> scheduleWithILP(const Partitioning &partitioning,
+                                           const ILPConfig &config = {});
 
 std::optional<BSPSchedule> scheduleWithILP(SPN &spn,
                                            const ILPConfig &config = {});
