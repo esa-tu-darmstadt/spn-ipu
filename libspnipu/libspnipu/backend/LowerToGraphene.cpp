@@ -23,10 +23,10 @@ class TensorMapping {
  public:
   TensorMapping(unsigned superstep, const BSPSchedule &schedule)
       : schedule(schedule) {
-    for (EdgeRef edge : schedule.getIncomingEdges(superstep)) {
+    for (EdgeRef edge : schedule.getPredecessorEdges(superstep)) {
       insertIncomingEdge(edge);
     }
-    for (EdgeRef edge : schedule.getOutgoingEdges(superstep)) {
+    for (EdgeRef edge : schedule.getSuccessorEdges(superstep)) {
       insertOutgoingEdge(edge);
     }
     for (auto &[proc, nodes] : schedule.getNodesOfSuperstep(superstep)) {
@@ -79,11 +79,11 @@ class TensorMapping {
   }
 
   void insertIncomingEdge(EdgeRef edge) {
-    unsigned proc = schedule.getProcessor(edge.getTarget());
+    unsigned proc = schedule.getProcessor(edge.getSuccessor());
     const auto &mapping = incomingNodeToIndex[proc];
 
     // Check if this proc already has an index for this node
-    if (auto it = mapping.find(edge.getSource()); it != mapping.end()) {
+    if (auto it = mapping.find(edge.getPredecessor()); it != mapping.end()) {
       return;
     }
 
@@ -92,15 +92,15 @@ class TensorMapping {
 
     // the global index is calculated after all incoming edges have been
     // inserted
-    incomingNodeToIndex[proc][edge.getSource()] = {0, nextIndex};
+    incomingNodeToIndex[proc][edge.getPredecessor()] = {0, nextIndex};
   }
 
   void insertOutgoingEdge(EdgeRef edge) {
-    unsigned proc = schedule.getProcessor(edge.getSource());
+    unsigned proc = schedule.getProcessor(edge.getPredecessor());
     const auto &mapping = outgoingNodeToIndex[proc];
 
     // Check if this proc already has an index for this node
-    if (auto it = mapping.find(edge.getSource()); it != mapping.end()) {
+    if (auto it = mapping.find(edge.getPredecessor()); it != mapping.end()) {
       return;
     }
 
@@ -109,7 +109,7 @@ class TensorMapping {
 
     // the global index is calculated after all outgoing edges have been
     // inserted
-    outgoingNodeToIndex[proc][edge.getSource()] = {0, nextIndex};
+    outgoingNodeToIndex[proc][edge.getPredecessor()] = {0, nextIndex};
   }
 
   void insertFeature(LeafNode *leafNode) {
@@ -130,31 +130,31 @@ class TensorMapping {
  public:
   /// Returns the global index of the incoming edge in the input tensor.
   size_t getGlobalIndexOfIncomingEdge(EdgeRef edge) const {
-    unsigned proc = schedule.getProcessor(edge.getTarget());
-    return incomingNodeToIndex.at(proc).at(edge.getSource()).first;
+    unsigned proc = schedule.getProcessor(edge.getSuccessor());
+    return incomingNodeToIndex.at(proc).at(edge.getPredecessor()).first;
   }
 
   /// Returns the processor-local index of the incoming edge in the input
   /// tensor. Input edges are stored after the features.
   size_t getLocalIndexOfIncomingEdge(EdgeRef edge) const {
-    unsigned proc = schedule.getProcessor(edge.getTarget());
+    unsigned proc = schedule.getProcessor(edge.getSuccessor());
     unsigned edgeIndex =
-        incomingNodeToIndex.at(proc).at(edge.getSource()).second;
+        incomingNodeToIndex.at(proc).at(edge.getPredecessor()).second;
     unsigned numLocalFeatures = numFeaturesPerProc.at(proc);
     return edgeIndex + numLocalFeatures;
   }
 
   /// Returns the global index of the outgoing edge in the output tensor.
   size_t getGlobalIndexOfOutgoingEdge(EdgeRef edge) const {
-    unsigned proc = schedule.getProcessor(edge.getSource());
-    return outgoingNodeToIndex.at(proc).at(edge.getSource()).first;
+    unsigned proc = schedule.getProcessor(edge.getPredecessor());
+    return outgoingNodeToIndex.at(proc).at(edge.getPredecessor()).first;
   }
 
   /// Returns the processor-local index of the outgoing edge in the output
   /// tensor.
   size_t getLocalIndexOfOutgoingEdge(EdgeRef edge) const {
-    unsigned proc = schedule.getProcessor(edge.getSource());
-    return outgoingNodeToIndex.at(proc).at(edge.getSource()).second;
+    unsigned proc = schedule.getProcessor(edge.getPredecessor());
+    return outgoingNodeToIndex.at(proc).at(edge.getPredecessor()).second;
   }
 
   /// Returns the global index of the global feature (aka scope) in the input
@@ -376,8 +376,8 @@ void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
     TensorMapping &mapping = tensorMappings[i];
 
     const auto &nodesPerProcs = schedule.getNodesOfSuperstep(i);
-    const auto &incomingEdges = schedule.getIncomingEdges(i);
-    const auto &outgoingEdges = schedule.getOutgoingEdges(i);
+    const auto &incomingEdges = schedule.getPredecessorEdges(i);
+    const auto &outgoingEdges = schedule.getSuccessorEdges(i);
 
     // Group the incoming and outgoing edges by processor
     std::unordered_map<unsigned, std::unordered_set<EdgeRef>>
@@ -385,11 +385,11 @@ void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
     std::unordered_map<unsigned, std::unordered_set<EdgeRef>>
         outgoingEdgesPerProc;
     for (EdgeRef edge : incomingEdges) {
-      incomingEdgesPerProc[schedule.getProcessor(edge.getTarget())].insert(
+      incomingEdgesPerProc[schedule.getProcessor(edge.getSuccessor())].insert(
           edge);
     }
     for (EdgeRef edge : outgoingEdges) {
-      outgoingEdgesPerProc[schedule.getProcessor(edge.getSource())].insert(
+      outgoingEdgesPerProc[schedule.getProcessor(edge.getPredecessor())].insert(
           edge);
     }
     // Add the root node as an outgoing edge if it is scheduled in this
@@ -419,7 +419,7 @@ void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
             for (EdgeRef edge : incomingEdgesPerProc[proc]) {
               uint32_t index = mapping.getLocalIndexOfIncomingEdge(edge);
               nodeToValue.emplace(std::make_pair<Node *, Value>(
-                  edge.getSource(), input[index]));
+                  edge.getPredecessor(), input[index]));
             }
 
             LowerNodeVisitor visitor(nodeToValue, input, mapping, proc);
@@ -431,7 +431,7 @@ void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
             // Copy the outgoing edges into the output tensor
             for (EdgeRef edge : outgoingEdgesPerProc[proc]) {
               uint32_t index = mapping.getLocalIndexOfOutgoingEdge(edge);
-              output[index] = nodeToValue.at(edge.getSource());
+              output[index] = nodeToValue.at(edge.getPredecessor());
             }
           },
           proc, In(inputTensors[i]), Out(outputTensors[i]));
@@ -452,7 +452,7 @@ void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
       unsigned index = mapping.getGlobalIndexOfOutgoingEdge(edge);
       poplar::Tensor outputValue =
           outputTensors[i].tensor().slice(index, index + 1);
-      unsigned targetSuperstep = schedule.getSuperstep(edge.getTarget());
+      unsigned targetSuperstep = schedule.getSuperstep(edge.getSuccessor());
       TensorMapping &targetMapping = tensorMappings[targetSuperstep];
       unsigned targetInputIndex =
           targetMapping.getGlobalIndexOfIncomingEdge(edge);
@@ -465,7 +465,7 @@ void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
       spdlog::trace(
           "Copying output of node {} from output tensor of superstep {} at "
           "index {} to input tensor of superstep {} at index {}",
-          (void *)edge.getSource(), i, index, targetSuperstep,
+          (void *)edge.getPredecessor(), i, index, targetSuperstep,
           targetInputIndex);
     }
     if (schedule.getSuperstep(spn.getRoot()) == i) {

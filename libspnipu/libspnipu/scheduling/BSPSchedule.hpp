@@ -24,10 +24,13 @@ class BSPSchedule {
     // superstep
     std::unordered_map<unsigned, std::unordered_set<NodeRef>> nodes;
 
-    // The incoming and outgoing edges of the superstep. These are computed
-    // when the schedule is locked.
-    std::unordered_set<EdgeRef> incomingEdges;
-    std::unordered_set<EdgeRef> outgoingEdges;
+    // Edges to nodes that must execute before this superstep, i.e., this
+    // superstep depends on.
+    std::unordered_set<EdgeRef> predecessorEdges;
+
+    // Edges to nodes that must execute after this superstep, i.e., this
+    // superstep produces results for.
+    std::unordered_set<EdgeRef> successorEdges;
   };
 
  public:
@@ -95,13 +98,16 @@ class BSPSchedule {
 
   unsigned getNumProcessors() const { return numProcessors_; }
 
-  // Returns the incoming edges of a superstep. Only valid after the schedule is
+  // Returns the predecessor edges of a superstep, i.e. edges to nodes that
+  // must execute before this superstep. Only valid after the schedule is
   // locked.
-  const std::unordered_set<EdgeRef>& getIncomingEdges(unsigned superstep) const;
+  const std::unordered_set<EdgeRef>& getPredecessorEdges(
+      unsigned superstep) const;
 
-  // Returns the outgoing edges of a superstep. Only valid after the schedule is
-  // locked.
-  const std::unordered_set<EdgeRef>& getOutgoingEdges(unsigned superstep) const;
+  // Returns the successor edges of a superstep, i.e. edges to nodes that
+  // must execute after this superstep. Only valid after the schedule is locked.
+  const std::unordered_set<EdgeRef>& getSuccessorEdges(
+      unsigned superstep) const;
 
   /// Returns a new schedule identical to this but without empty supersteps.
   BSPSchedule withoutEmptySupersteps() const;

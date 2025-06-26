@@ -46,11 +46,12 @@ int PerformanceModel::getCommunicationCost() const {
   return 1;
 }
 
-int PerformanceModel::getComputationCost(PartitionRef partition, unsigned proc) const {
+int PerformanceModel::getComputationCost(PartitionRef partition,
+                                         unsigned proc) const {
   if (!partition) {
     return 0;
   }
-  
+
   int totalCost = 0;
   for (NodeRef node : partition->getNodes()) {
     totalCost += getComputationCost(node, proc);
@@ -58,15 +59,16 @@ int PerformanceModel::getComputationCost(PartitionRef partition, unsigned proc) 
   return totalCost;
 }
 
-int PerformanceModel::getCommunicationCost(const PartitionEdge &edge) const {
-  // Communication cost is the single edge cost times the number of edges between the partitions
+int PerformanceModel::getCommunicationCost(const PartitionEdge& edge) const {
+  // Communication cost is the single edge cost times the number of edges
+  // between the partitions
   int edgeCount = 0;
-  
+
   // Count edges from source partition nodes to target partition nodes
-  for (NodeRef sourceNode : edge.source->getNodes()) {
+  for (NodeRef sourceNode : edge.predecessor->getNodes()) {
     for (NodeRef child : sourceNode->getChildren()) {
       // Check if this child is in the target partition
-      for (NodeRef targetNode : edge.target->getNodes()) {
+      for (NodeRef targetNode : edge.successor->getNodes()) {
         if (child == targetNode) {
           edgeCount++;
           break;
@@ -74,6 +76,6 @@ int PerformanceModel::getCommunicationCost(const PartitionEdge &edge) const {
       }
     }
   }
-  
+
   return getCommunicationCost() * edgeCount;
 }

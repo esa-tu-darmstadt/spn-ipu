@@ -60,7 +60,7 @@ void BSPSchedule::lock() {
   for (unsigned i = 0; i < supersteps_.size(); ++i) {
     BSPSuperstep& ss = supersteps_.at(i);
 
-    // Calculate outgoing edges
+    // Calculate outgoing edges (successor edges)
     for (const auto [node, superstep] : nodeToSuperstep_) {
       if (superstep == i) {
         // This node is scheduled in this superstep, so it cannot have outgoing
@@ -69,17 +69,17 @@ void BSPSchedule::lock() {
       }
       for (NodeRef child : node->getChildren()) {
         if (nodeToSuperstep_.at(child) == i) {
-          ss.outgoingEdges.insert({child, node});
+          ss.successorEdges.insert({child, node});
         }
       }
     }
 
-    // Calculate incoming edges
+    // Calculate incoming edges (predecessor edges)
     for (auto& [proc, nodes] : ss.nodes) {
       for (const NodeRef node : nodes) {
         for (NodeRef child : node->getChildren()) {
           if (nodeToSuperstep_.at(child) != i) {
-            ss.incomingEdges.insert({child, node});
+            ss.predecessorEdges.insert({child, node});
           }
         }
       }
@@ -87,19 +87,19 @@ void BSPSchedule::lock() {
   }
 }
 
-const std::unordered_set<EdgeRef>& BSPSchedule::getIncomingEdges(
+const std::unordered_set<EdgeRef>& BSPSchedule::getPredecessorEdges(
     unsigned superstep) const {
   if (!locked_) {
     throw std::runtime_error("Schedule is not locked.");
   }
-  return supersteps_.at(superstep).incomingEdges;
+  return supersteps_.at(superstep).predecessorEdges;
 }
-const std::unordered_set<EdgeRef>& BSPSchedule::getOutgoingEdges(
+const std::unordered_set<EdgeRef>& BSPSchedule::getSuccessorEdges(
     unsigned superstep) const {
   if (!locked_) {
     throw std::runtime_error("Schedule is not locked.");
   }
-  return supersteps_.at(superstep).outgoingEdges;
+  return supersteps_.at(superstep).successorEdges;
 }
 
 BSPSchedule BSPSchedule::withoutEmptySupersteps() const {

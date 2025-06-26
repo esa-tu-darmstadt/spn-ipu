@@ -315,8 +315,8 @@ void plotPartitioningSimplified(std::ofstream& file,
     auto sourceIt = partitionToIndex.find(partition.get());
     if (sourceIt == partitionToIndex.end()) continue;
 
-    for (const auto& edge : partitioning.getOutgoingEdges(partition.get())) {
-      auto targetIt = partitionToIndex.find(edge.target);
+    for (const auto& edge : partitioning.getSuccessorEdges(partition.get())) {
+      auto targetIt = partitionToIndex.find(edge.successor);
       if (targetIt == partitionToIndex.end()) continue;
 
       size_t sourceIdx = sourceIt->second;
@@ -409,6 +409,5 @@ void plotPartitioningAsDot(Partitioning& partitioning,
 
   file << "}" << std::endl;
 }
-
 
 }  // namespace spnipu

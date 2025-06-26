@@ -13,14 +13,14 @@ using PartitionRef = Partition *;
 class Partitioning;
 
 struct PartitionEdge {
-  PartitionRef source;
-  PartitionRef target;
+  PartitionRef predecessor;
+  PartitionRef successor;
 
   PartitionEdge(PartitionRef source, PartitionRef target)
-      : source(source), target(target) {}
+      : predecessor(source), successor(target) {}
 
   bool operator==(const PartitionEdge &other) const {
-    return source == other.source && target == other.target;
+    return predecessor == other.predecessor && successor == other.successor;
   }
 };
 
@@ -28,8 +28,10 @@ class Partition {
   friend class Partitioning;
   std::list<NodeRef> nodes_;
 
-  std::list<PartitionEdge> outgoingEdges_;
-  std::list<PartitionEdge> incomingEdges_;
+  std::list<PartitionEdge>
+      successorEdges_;  // Partitions that execute after this one
+  std::list<PartitionEdge>
+      predecessorEdges_;  // Partitions that execute before this one
 
  public:
   /// Constructs an empty partition
@@ -114,24 +116,26 @@ class Partitioning {
     calculateEdges();
   }
 
-  const auto &getOutgoingEdges(PartitionRef partition) const {
+  /// Returns partitions that must execute after the given partition
+  const auto &getSuccessorEdges(PartitionRef partition) const {
     if (!partition) {
       throw std::invalid_argument("Partition cannot be null");
     }
     if (!locked_) {
       throw std::runtime_error("Partitioning must be locked to access edges");
     }
-    return partition->outgoingEdges_;
+    return partition->successorEdges_;
   }
 
-  const auto &getIncomingEdges(PartitionRef partition) const {
+  /// Returns partitions that must execute before the given partition
+  const auto &getPredecessorEdges(PartitionRef partition) const {
     if (!partition) {
       throw std::invalid_argument("Partition cannot be null");
     }
     if (!locked_) {
       throw std::runtime_error("Partitioning must be locked to access edges");
     }
-    return partition->incomingEdges_;
+    return partition->predecessorEdges_;
   }
 
   const auto &getPartitions() const { return partitions_; }
@@ -148,17 +152,18 @@ class Partitioning {
   void calculateEdges() {
     for (const auto &partition : partitions_) {
       for (const auto &node : partition->nodes_) {
-        PartitionRef sourcePartition = getPartition(node);
-        if (!sourcePartition) continue;
+        PartitionRef parentPartition = getPartition(node);
+        if (!parentPartition) continue;
 
         for (const auto &child : node->getChildren()) {
-          PartitionRef targetPartition = getPartition(child);
-          if (!targetPartition || targetPartition == sourcePartition) continue;
+          PartitionRef childPartition = getPartition(child);
+          if (!childPartition || childPartition == parentPartition) continue;
 
-          sourcePartition->outgoingEdges_.emplace_back(sourcePartition,
-                                                       targetPartition);
-          targetPartition->incomingEdges_.emplace_back(sourcePartition,
-                                                       targetPartition);
+          // Child partition must execute before parent partition
+          childPartition->successorEdges_.emplace_back(childPartition,
+                                                       parentPartition);
+          parentPartition->predecessorEdges_.emplace_back(childPartition,
+                                                          parentPartition);
         }
       }
     }

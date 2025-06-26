@@ -10,24 +10,26 @@ using NodeRef = Node*;
 /// References a directed edge in an SPN
 class EdgeRef {
  public:
-  EdgeRef(NodeRef source, NodeRef target) : source_(source), target_(target) {}
+  EdgeRef(NodeRef predecessor, NodeRef successor)
+      : predecessor_(predecessor), successor_(successor) {}
 
-  NodeRef getSource() const { return source_; }
-  NodeRef getTarget() const { return target_; }
+  NodeRef getPredecessor() const { return predecessor_; }
+  NodeRef getSuccessor() const { return successor_; }
 
   bool operator==(const EdgeRef& other) const {
-    return source_ == other.source_ && target_ == other.target_;
+    return predecessor_ == other.predecessor_ && successor_ == other.successor_;
   }
 
   bool operator!=(const EdgeRef& other) const { return !(*this == other); }
 
   bool operator<(const EdgeRef& other) const {
-    return std::tie(source_, target_) < std::tie(other.source_, other.target_);
+    return std::tie(predecessor_, successor_) <
+           std::tie(other.predecessor_, other.successor_);
   }
 
  private:
-  NodeRef source_;
-  NodeRef target_;
+  NodeRef predecessor_;
+  NodeRef successor_;
 };
 
 }  // namespace spnipu
@@ -38,8 +40,8 @@ struct hash;
 template <>
 struct hash<spnipu::EdgeRef> {
   std::size_t operator()(const spnipu::EdgeRef& edge) const {
-    size_t src = (size_t)edge.getSource();
-    size_t tgt = (size_t)edge.getTarget();
+    size_t src = (size_t)edge.getPredecessor();
+    size_t tgt = (size_t)edge.getSuccessor();
     return src ^ (tgt + 0x9e3779b9 + (src << 6) + (src >> 2));
   }
 };

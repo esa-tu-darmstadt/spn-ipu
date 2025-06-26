@@ -136,9 +136,9 @@ std::optional<BSPSchedule> scheduleWithILPPartitioning(
   // is computed on p in superstep s then u’s value is present on p.
   for (int v = 0; v < n; v++) {
     PartitionRef targetPartition = partitionRefs[v];
-    const auto& incomingEdges = partitioning.getOutgoingEdges(targetPartition);
-    for (const auto& edge : incomingEdges) {
-      int uIndex = partitionToIndex[edge.target];
+    const auto& successors = partitioning.getSuccessorEdges(targetPartition);
+    for (const auto& edge : successors) {
+      int uIndex = partitionToIndex[edge.successor];
       for (int p = 0; p < P; p++) {
         for (int s = 0; s < S; s++) {
           solver->MakeRowConstraint(LinearExpr(comp[v][p][s]) <=
