@@ -3,55 +3,57 @@
 #include "libspnipu/backend/ExecutionEngine.hpp"
 #include "libspnipu/frontend/Deserialize.hpp"
 #include "libspnipu/model/Nodes.hpp"
+#include "libspnipu/model/Partitioning.hpp"
 #include "libspnipu/model/SPN.hpp"
 #include "libspnipu/scheduling/BSPSchedule.hpp"
 #include "libspnipu/scheduling/ILPScheduler.hpp"
+#include "libspnipu/scheduling/Partitioning.hpp"
+#include "libspnipu/util/DotVisualization.hpp"
 #include "libspnipu/util/HostExecutor.hpp"
-#include "libspnipu/util/Visualization.hpp"
+#include "libspnipu/util/HtmlVisualization.hpp"
 #include "spdlog/spdlog.h"
 
 using namespace spnipu;
 int main(int argc, char** argv) {
   spdlog::set_level(spdlog::level::trace);
 
+  //   SPN spn = deserializeSPN(
+  //       "/workspaces/spn-ipu/data/spns/plants_100_200_4_3_3_3_1_True.bin");
   // SPN spn = deserializeSPN("/workspaces/spn-ipu/data/spns/gaussian10.bin");
-  SPN spn = deserializeSPN("/workspaces/spn-ipu/data/spns/gaussian10.bin");
+  SPN spn = deserializeSPN("/workspaces/spn-ipu/data/spns/speaker_FADG0.bin");
 
-  DotVisualizer::plotSPN(spn, "spn.dot");
+  plotSPNAsDot(spn, "spn.dot");
 
   std::vector<double> hostInput(spn.getNumFeatures(), 0.5);
   std::vector<float> deviceInput(spn.getNumFeatures());
   std::copy(hostInput.begin(), hostInput.end(), deviceInput.begin());
 
-  HostExecutor hostExecutor(spn);
+  HostExecutor hostExecutor(spn, false);
   double hostResult = hostExecutor.evaluate(hostInput);
 
-  // BSPSchedule schedule(spn);
-  // {
-  //   // Schedule the nodes in post-order
-  //   unsigned superstep = 0;
-  //   spn.walk<NodeTraversalOrder::PostOrder>(
-  //       [&schedule, &superstep](NodeRef node) {
-  //         //   if (dynamic_cast<LeafNode*>(node) != 0)
-  //         //     schedule.scheduleNode(node, 0, 0);
-  //         //   else
-  //         //     schedule.scheduleNode(node, 1, 0);
-  //         schedule.scheduleNode(node, (superstep++) / 3, 0);
-  //       });
-  // }
+  // // Calculate the schedule without partitioning
+  // std::optional<BSPSchedule> scheduleWithoutPartitioning =
+  // scheduleWithILP(spn);
+  // plotBSPScheduleAsDot(*scheduleWithoutPartitioning,
+  //                      "scheduleWithoutPartitioning.dot");
 
-  std::optional<BSPSchedule> maybeSchedule = scheduleWithILP(spn);
-  if (!maybeSchedule.has_value()) {
-    spdlog::error("Failed to schedule SPN");
-    return 1;
-  }
-  BSPSchedule& schedule = maybeSchedule.value();
-  DotVisualizer::plotBSPSchedule(schedule, "schedule.dot");
+  // Partition the SPN using DagP
+  std::optional<Partitioning> partitioning =
+      partitionWithDagP(spn, std::min(spn.getNodes().size(), 50ul));
+  plotPartitioningAsDot(*partitioning, "partitioning_detailed.dot", true);
+  plotPartitioningAsDot(*partitioning, "partitioning_simplified.dot", false);
 
-  schedule.lock();
-  schedule.validate();
+  // Calculate the schedule with partitioning
+  std::optional<BSPSchedule> scheduleWithPartitioning =
+      scheduleWithILP(*partitioning);
+  plotBSPScheduleAsDot(*scheduleWithPartitioning,
+                       "scheduleWithPartitioning_simplified.dot", false);
+  plotBSPScheduleAsDot(*scheduleWithPartitioning,
+                       "scheduleWithPartitioning_detailed.dot", true);
+  HtmlVisualization::plotBSPScheduleAsTimeline(
+      *scheduleWithPartitioning, "scheduleWithPartitioning_timeline.html");
 
-  ExecutionEngine engine(schedule);
+  ExecutionEngine engine(*scheduleWithPartitioning);
   engine.compile(true);
   float deviceResult = engine.run(deviceInput);
 
