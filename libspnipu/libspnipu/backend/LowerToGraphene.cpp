@@ -306,13 +306,15 @@ struct LowerNodeVisitor : NodeVisitor {
 
 }  // namespace
 
-void spnipu::lowerToGraphene(BSPSchedule &schedule, bool verbose) {
-  schedule.lock();
+void spnipu::lowerToGraphene(const BSPSchedule &schedule, bool verbose) {
+  if (!schedule.isLocked()) {
+    throw std::runtime_error("Schedule must be locked before lowering.");
+  }
 
   poplar::Graph &graph = Context::graph();
   Runtime &runtime = Runtime::instance();
 
-  SPN &spn = schedule.getSPN();
+  const SPN &spn = schedule.getSPN();
   unsigned numFeatures = spn.getNumFeatures();
 
   TypeRef inputType = Type::FLOAT32;
